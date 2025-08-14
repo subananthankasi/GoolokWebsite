@@ -11,7 +11,7 @@ export const LOGIN_BASE_URL = "https://webman.co.in/goolok";
 // export const IMG_PATH = "https://api.goolok.com/uploads/";
 // export const LOGIN_BASE_URL = "https://api.goolok.com";
 
-//check
+//check 2
 
 export const PAYMENT_KEY = "rzp_live_CxcTOotGhckAOs"
 export const PAYMENT_KEY_SECRET = "wFIxdBMPqfbTvjbDUtJ5gHX0"
