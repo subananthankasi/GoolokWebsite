@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import logo from "../../assets/images/LOGO1.png";
-import FinalLogo from "../../assets/images/Goolok Final Logo.png"
+import FinalLogo from "../../assets/images/Goolok Final Logo.png";
 import "../navbar/navbar.css";
 import "@fortawesome/fontawesome-free/css/all.css";
 import "../../assets/bootstrap5/css/bootstrap.min.css";
@@ -15,8 +15,8 @@ import { Avatar } from "@mui/material";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutAuth } from "../../Redux/Action/LoginAction.js";
 import { useAlert } from "react-alert";
-import { confirmAlert } from 'react-confirm-alert';
-import 'react-confirm-alert/src/react-confirm-alert.css';
+import { confirmAlert } from "react-confirm-alert";
+import "react-confirm-alert/src/react-confirm-alert.css";
 import axios from "axios";
 import { LOGIN_BASE_URL } from "../../Api/api.js";
 import map from "../../assets/images/magnifying-glass.png";
@@ -27,11 +27,11 @@ import { fetchUserData } from "../../Redux/Action/UserData.js";
 import Notification from "../Notification/Notification.jsx";
 import Wishlist from "../Notification/Wishlist.jsx";
 import AddToCard from "../Notification/AddToCard.jsx";
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import LoginIcon from '@mui/icons-material/Login';
-import Button from '@mui/material/Button';
-import LogoutIcon from '@mui/icons-material/Logout';
-import HomeWorkIcon from '@mui/icons-material/HomeWork';
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import LoginIcon from "@mui/icons-material/Login";
+import Button from "@mui/material/Button";
+import LogoutIcon from "@mui/icons-material/Logout";
+import HomeWorkIcon from "@mui/icons-material/HomeWork";
 import ApartmentIcon from "@mui/icons-material/Apartment";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import AddBoxIcon from "@mui/icons-material/AddBox";
@@ -58,13 +58,14 @@ import {
   faUser,
   faUserCircle,
 } from "@fortawesome/free-solid-svg-icons";
-
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 function Navbar() {
   const alert = useAlert();
 
   const [isPopupVisible, setPopupVisible] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const dispatch = useDispatch()
+  const dispatch = useDispatch();
 
   const togglePopup = () => {
     setPopupVisible(!isPopupVisible);
@@ -75,9 +76,6 @@ function Navbar() {
   const handleShow = () => setShowModal(true);
   const handleClose = () => setShowModal(false);
 
-
-
-
   const [isOpenCategory, setIsOpenCategory] = useState(false);
   const [isOpenLocation, setIsOpenLocation] = useState(false);
 
@@ -86,18 +84,24 @@ function Navbar() {
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
-      if (dropdownCategoryRef.current && !dropdownCategoryRef.current.contains(event.target)) {
+      if (
+        dropdownCategoryRef.current &&
+        !dropdownCategoryRef.current.contains(event.target)
+      ) {
         setIsOpenCategory(false);
       }
-      if (dropdownLocationRef.current && !dropdownLocationRef.current.contains(event.target)) {
+      if (
+        dropdownLocationRef.current &&
+        !dropdownLocationRef.current.contains(event.target)
+      ) {
         setIsOpenLocation(false);
       }
     };
 
-    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener("mousedown", handleOutsideClick);
 
     return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener("mousedown", handleOutsideClick);
     };
   }, []);
 
@@ -108,11 +112,6 @@ function Navbar() {
   const toggleDropdownLocation = () => {
     setIsOpenLocation(!isOpenLocation);
   };
-
-
-
-
-
 
   const [activeItem, setActiveItem] = useState(" ");
   const handleItemClick = (index) => {
@@ -125,7 +124,11 @@ function Navbar() {
     if (location.pathname === "/") {
       handleItemClick(0);
     }
-    if (location.pathname === "/properties" || location.pathname === "/property_details" || location.pathname === "/apartment_details") {
+    if (
+      location.pathname === "/properties" ||
+      location.pathname === "/property_details" ||
+      location.pathname === "/apartment_details"
+    ) {
       handleItemClick(1);
     }
     if (location.pathname === "/profile_edit") {
@@ -138,27 +141,22 @@ function Navbar() {
 
   const logutAuth = async () => {
     try {
-      await axios.get(
-        `${LOGIN_BASE_URL}/vendor/Signout`,
-        {
-          headers: {
-            Authorization: `${token}`,
-          },
-        }
-      );
+      await axios.get(`${LOGIN_BASE_URL}/vendor/Signout`, {
+        headers: {
+          Authorization: `${token}`,
+        },
+      });
       await localStorage.removeItem("zxcvbnm@#");
       await dispatch(logoutAuth());
-      await alert.success(
-        "You have been successfully logged out. See you again soon!"
-      ).
-        window.location.reload()
+      await alert
+        .success("You have been successfully logged out. See you again soon!")
+        .window.location.reload();
     } catch (error) {
       console.error(error);
       await localStorage.removeItem("zxcvbnm@#");
-      window.location.reload()
+      window.location.reload();
     }
-  }
-
+  };
 
   const condition = useSelector((state) => state.auth.isAuthenticated);
   const token = localStorage.getItem("zxcvbnm@#");
@@ -207,25 +205,28 @@ function Navbar() {
     setIsModalOpen(false);
   };
 
-
-
   const navigate = useNavigate();
   const userData = useSelector((state) => state.userData.userData);
   useEffect(() => {
-    if(token){
-    dispatch(fetchUserData(navigate))
-
+    if (token) {
+      dispatch(fetchUserData(navigate));
     }
   }, [dispatch, navigate]);
 
-
-  // const cartCount = useSelector(state => state.cart.cartCount);
+  const [anchorEl, setAnchorEl] = React.useState(null);
+  const open = Boolean(anchorEl);
+  const handleIconClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleIconClose = () => {
+    setAnchorEl(null);
+  };
   return (
     <>
       <EnquiryModal show={showModal} handleClose={handleClose} />
       <Signin isOpen={isModalOpen} closeModal={closeModal} />
       <Login isOpen={isModalOpenlogin} closeModal={closeModalLogin} />
-     
+
       <nav
         className="navbar navbar-expand-lg p-0  d-block "
         style={{ width: "100%", color: "white" }}
@@ -241,37 +242,75 @@ function Navbar() {
               <div className="d-flex">
                 {!isAuthenticated ? (
                   <>
-                    <span className="me-1"><AccountCircleIcon sx={{ fontSize: 24 }} />  </span>
-                    <h6 className="p-0 mb-0 me-1" style={{ fontSize: "18px",cursor:"pointer" }} onClick={openModal}>  Sign up </h6>
-                    <h6 className="p-0 mb-0 me-1" style={{ fontSize: "18px" }}>  / </h6>
-                    <h6 className="p-0 mb-0 me-3" style={{ fontSize: "18px",cursor:"pointer" }} onClick={openModallogin}>  Login</h6>
+                    <span className="me-1">
+                      <AccountCircleIcon sx={{ fontSize: 24 }} />{" "}
+                    </span>
+                    <h6
+                      className="p-0 mb-0 me-1"
+                      style={{ fontSize: "18px", cursor: "pointer" }}
+                      onClick={openModal}
+                    >
+                      {" "}
+                      Sign up{" "}
+                    </h6>
+                    <h6 className="p-0 mb-0 me-1" style={{ fontSize: "18px" }}>
+                      {" "}
+                      /{" "}
+                    </h6>
+                    <h6
+                      className="p-0 mb-0 me-3"
+                      style={{ fontSize: "18px", cursor: "pointer" }}
+                      onClick={openModallogin}
+                    >
+                      {" "}
+                      Login
+                    </h6>
                   </>
                 ) : (
                   <>
-                    <div className="d-flex" style={{ textAlign: 'center', justifyContent: 'center', alignItems: 'center' }}>
+                    <div
+                      className="d-flex"
+                      style={{
+                        textAlign: "center",
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
                       <p
                         href="#"
                         className="d-flex align-items-center p-0 mb-0 me-1"
-                        onClick={() => navigate('/profile_edit/mybooking')}
-                        style={{cursor:"pointer"}}
+                        onClick={() => navigate("/profile_edit/mybooking")}
+                        style={{ cursor: "pointer" }}
                       >
                         <Avatar
                           src={
                             "https://i.pinimg.com/originals/17/f3/9c/17f39c6f7a4a5457f39dba2368f0d077.jpg"
                           }
-                          style={{ 
-                          }}
+                          style={{}}
                         />
-                        &nbsp;{userData?.customer ? userData.customer.charAt(0).toUpperCase() + userData.customer.slice(1).toLowerCase() : ''}
+                        &nbsp;
+                        {userData?.customer
+                          ? userData.customer.charAt(0).toUpperCase() +
+                            userData.customer.slice(1).toLowerCase()
+                          : ""}
                       </p>
-                      <h6 className="p-0 mb-0 me-2  " style={{ fontSize: "18px" }}>  / </h6>
-                      <p className="p-0 mb-0 me-3  " onClick={handleLogout} style={{cursor:"pointer"}}>Logout</p>
+                      <h6
+                        className="p-0 mb-0 me-2  "
+                        style={{ fontSize: "18px" }}
+                      >
+                        {" "}
+                        /{" "}
+                      </h6>
+                      <p
+                        className="p-0 mb-0 me-3  "
+                        onClick={handleLogout}
+                        style={{ cursor: "pointer" }}
+                      >
+                        Logout
+                      </p>
                     </div>
-
                   </>
-
                 )}
-
               </div>
             </div>
           </div>
@@ -297,12 +336,95 @@ function Navbar() {
             </div>
 
             {/* Right Side: User Icon */}
-            <div>
+            {/* <div>
               <FontAwesomeIcon
                 icon={faUserCircle}
                 style={{ color: "#1f3351" }}
                 size="2x"
               />
+            </div> */}
+            <div>
+              <Button
+                id="basic-button"
+                aria-controls={open ? "basic-menu" : undefined}
+                aria-haspopup="true"
+                aria-expanded={open ? "true" : undefined}
+                onClick={handleIconClick}
+                sx={{ minWidth: "auto" }}
+              >
+                {isAuthenticated ? (
+                  <Avatar
+                    src="https://i.pinimg.com/originals/17/f3/9c/17f39c6f7a4a5457f39dba2368f0d077.jpg"
+                    sx={{ width: 28, height: 28, mr: 1 }}
+                  />
+                ) : (
+                  <FontAwesomeIcon
+                    icon={faUserCircle}
+                    style={{ color: "#1f3351" }}
+                    size="2x"
+                  />
+                )}
+              </Button>
+
+              <Menu
+                id="basic-menu"
+                anchorEl={anchorEl}
+                open={open}
+                onClose={handleIconClose}
+                slotProps={{
+                  list: {
+                    "aria-labelledby": "basic-button",
+                  },
+                }}
+              >
+                {!isAuthenticated ? (
+                  <>
+                    <MenuItem
+                      onClick={() => {
+                        handleIconClose();
+                        openModal();
+                      }}
+                    >
+                      Sign up
+                    </MenuItem>
+                    <MenuItem
+                      onClick={() => {
+                        handleIconClose();
+                        openModallogin();
+                      }}
+                    >
+                      Login
+                    </MenuItem>
+                  </>
+                ) : (
+                  <>
+                    <MenuItem
+                      onClick={() => {
+                        handleIconClose();
+                        navigate("/profile_edit/mybooking");
+                      }}
+                    >
+                      <Avatar
+                        src="https://i.pinimg.com/originals/17/f3/9c/17f39c6f7a4a5457f39dba2368f0d077.jpg"
+                        sx={{ width: 28, height: 28, mr: 1 }}
+                      />
+                      {userData?.customer
+                        ? userData.customer.charAt(0).toUpperCase() +
+                          userData.customer.slice(1).toLowerCase()
+                        : ""}
+                    </MenuItem>
+                    <MenuItem
+                      onClick={() => {
+                        handleIconClose();
+                        handleLogout();
+                      }}
+                      className="text-center"
+                    >
+                      Logout
+                    </MenuItem>
+                  </>
+                )}
+              </Menu>
             </div>
           </div>
           <div className="container-fluid mt-2 d-block d-lg-none">
@@ -332,7 +454,6 @@ function Navbar() {
                   <Wishlist />
                 </div>
                 <div>
-
                   <AddToCard />
                 </div>
               </div>
@@ -556,7 +677,7 @@ function Navbar() {
                   </div>
                 </div>
               </div>
-              <div className="input-group drop " >
+              <div className="input-group drop ">
                 <input
                   type="text"
                   className="form-control1"
@@ -884,6 +1005,3 @@ function Navbar() {
 }
 
 export default Navbar;
-
-
-

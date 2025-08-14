@@ -26,6 +26,7 @@ import { ThreeDots } from "react-loader-spinner";
 import { Audio } from "react-loader-spinner";
 import { Skeleton } from "primereact/skeleton";
 import { useAlert } from "react-alert";
+import store from "../../Redux/Store/store";
 
 const CheckoutPage = () => {
   const { error, isLoading, Razorpay } = useRazorpay();
@@ -37,6 +38,10 @@ const CheckoutPage = () => {
   const [state, setState] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState("Home");
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const userId = localStorage.getItem("userid");
+  const [couponsCode, setCouponsCode] = useState("");
+  const [responseCoupon, setResponseCoupon] = useState("");
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -54,6 +59,7 @@ const CheckoutPage = () => {
   }, []);
 
   const shoppingCardDatas = useSelector((state) => state.cart.cartItems);
+  console.log("shoppingCardDatas",shoppingCardDatas)
   const cartLoading = useSelector((state) => state.cart.loading);
   const [parsedCardValues, setParsedCardValues] = useState([]);
 
@@ -90,7 +96,7 @@ const CheckoutPage = () => {
       console.error("Error fetching invoice:", error);
     }
   };
-  console.log("couppns", couponsData);
+
   useEffect(() => {
     if (token) {
       fetch();
@@ -159,12 +165,43 @@ const CheckoutPage = () => {
   const getAddressFromStorage = JSON.parse(localStorage.getItem("address"));
   const deleteLoadingId = useSelector((state) => state.cart.deleteLoadingId);
 
-  const handleRemove = (id) => {
-    dispatch(cardDeleteThunk(id)).then(() => {
-      dispatch(cardListThunk(id));
-      dispatch(cardGetThunk());
-    });
-  };
+  // const handleRemove = async(id) => {
+  //   dispatch(cardDeleteThunk(id)).then(() => {
+  //     dispatch(cardListThunk(id));
+  //     dispatch(cardGetThunk());
+  //   });
+  // };
+  console.log("couponsCode", couponsCode);
+
+const handleRemove = async (id) => {
+  try {
+
+    await dispatch(cardDeleteThunk(id));
+    await dispatch(cardListThunk());
+    await dispatch(cardGetThunk());
+
+  
+    const updatedState = store.getState();
+    console.log("updatedState",updatedState)
+    const updatedTotal = updatedState.cart.total; 
+    console.log("updatedTotal",updatedTotal)
+
+    const updatedCouponCode = updatedState.cart.responseCoupon?.coupon_code;
+
+   
+    const payload = {
+      coupon_code: updatedCouponCode,
+      cart_total: updatedTotal,
+      user_id: userId,
+    };
+
+    const response = await axiosInstance.post("/vendor/applyCoupon", payload);
+    setResponseCoupon(response.data);
+    setCouponsCode("");
+  } catch (error) {
+    console.error("Error removing item:", error);
+  }
+};
 
   const [remainingAmount, setReminingAmount] = useState([]);
 
@@ -208,6 +245,8 @@ const CheckoutPage = () => {
             city: payload_address?.city,
             state: payload_address?.state,
             addressid: payload_address?.addressid,
+            coupon_code: couponsCode,
+            user_id: userId,
           };
           setPaymentLoading(false);
           try {
@@ -277,37 +316,27 @@ const CheckoutPage = () => {
 
   const discount = total - discountAmount;
 
-  const userMobile = localStorage.getItem("mobile");
-  const userId = localStorage.getItem("userid");
-  const [couponsCode, setCouponsCode] = useState("");
   const handleCouponClick = async () => {
     const payload = {
       coupon_code: couponsCode,
       cart_total: discountAmount,
       user_id: userId,
     };
-    console.log("payload", payload);
     try {
       const response = await axiosInstance.post("/vendor/applyCoupon", payload);
+      setResponseCoupon(response.data);
       setCouponsCode("");
-      alert.success("You coupon is successfully applied");
+      alert.success(response.data.message);
     } catch (error) {
-      alert.error("Failed to apply your coupon!");
+      alert.error(error.response.data.messages.error);
+      setCouponsCode("");
     }
   };
+
   return (
     <>
       <div className="container checkout-address p-3 p-lg-5 ">
-        <div
-          className="row"
-          // style={{
-          //   borderRadius: "10px",
-          //   height: "470px",
-          //   overflow: "scroll",
-          //   scrollbarColor: "white",
-          //   scrollbarWidth: "none",
-          // }}
-        >
+        <div className="row">
           <div
             className=" col-lg-7 col-12  p-0 "
             style={{
@@ -321,7 +350,7 @@ const CheckoutPage = () => {
             <div
               className="card p-0"
               style={{
-                height: "70px",
+                minHeight: "70px",
                 position: "sticky",
                 top: "0",
                 zIndex: "1",
@@ -373,7 +402,7 @@ const CheckoutPage = () => {
               ) : (
                 <>
                   <div className="row p-2">
-                    <div className="col-lg-10 col-12">
+                    <div className="col-lg-10 col-md-10 col-12">
                       <h6 style={{ fontSize: "12x" }}>
                         Your Address :{" "}
                         <span>
@@ -389,7 +418,7 @@ const CheckoutPage = () => {
                       </p>
                     </div>
                     <div
-                      className="col-lg-2 col-12 text-center"
+                      className="col-lg-2 col-md-2 col-12 text-center"
                       style={{ alignItems: "center", alignContent: "center" }}
                     >
                       <button
@@ -550,6 +579,98 @@ const CheckoutPage = () => {
                       </div>
                     </div>
                   </div>
+
+                  // <div className="card mt-1">
+                  //   <div className="p-3">
+                  //     <div className="row g-3 align-items-center">
+                  //       {/* Image Section */}
+                  //       <div className="col-4 col-md-3 text-center">
+                  //         <img
+                  //           src={`${IMG_PATH}enquiry/gallery/${item.image}`}
+                  //           alt="land"
+                  //           className="rounded img-fluid"
+                  //           style={{
+                  //             minHeight: "150px",
+                  //             minWidth: "100px",
+                  //             // objectFit: "cover",
+                  //           }}
+                  //           // style={{ width: "150px", height: "150px" }}
+                  //         />
+                  //       </div>
+
+                  //       {/* Property Details Section */}
+                  //       <div className="col-8 col-md-6">
+                  //         <h6 className="fw-bold">{item.propertyName}</h6>
+                  //         <h6
+                  //           className="text-muted"
+                  //           style={{ fontSize: "14px" }}
+                  //         >
+                  //           Taluk : {item.taluk}
+                  //         </h6>
+                  //         <h6
+                  //           className="text-muted"
+                  //           style={{ fontSize: "14px" }}
+                  //         >
+                  //           Village : {item.village}
+                  //         </h6>
+                  //         <h6
+                  //           className="text-muted"
+                  //           style={{ fontSize: "14px" }}
+                  //         >
+                  //           Unit : {item.units}
+                  //         </h6>
+
+                  //         {item.disc_status === "true" ? (
+                  //           <div style={{ fontSize: "14px" }}>
+                  //             Price :
+                  //             <strike className="mx-2 text-muted">
+                  //               ₹ {item.price}
+                  //             </strike>
+                  //             <b>₹{item.total_aft_disc}</b>
+                  //           </div>
+                  //         ) : (
+                  //           <h6
+                  //             className="text-muted"
+                  //             style={{ fontSize: "14px" }}
+                  //           >
+                  //             Price : ₹{item.price}
+                  //           </h6>
+                  //         )}
+
+                  //         <h6>
+                  //           <b>Booking Amount : ₹{item.booking_amount || 0}</b>
+                  //         </h6>
+                  //       </div>
+
+                  //       {/* Land Type + Remove Button Section */}
+                  //       <div className="col-12 col-md-3 d-flex justify-content-between align-items-center mt-2 mt-md-0">
+                  //         <h6 className="mb-0 fw-bold">{item.landType}</h6>
+                  //         <button
+                  //           className="btn text-danger card_remove_btn"
+                  //           style={{
+                  //             border: "1px solid rgb(217, 29, 29)",
+                  //             fontSize: "13px",
+                  //             fontWeight: "600",
+                  //             outline: "none",
+                  //           }}
+                  //           onClick={() => handleRemove(item.id)}
+                  //         >
+                  //           {deleteLoadingId === item.id ? (
+                  //             <Audio
+                  //               height="20"
+                  //               width="100"
+                  //               color="rgb(217, 29, 29)"
+                  //               ariaLabel="audio-loading"
+                  //               visible={true}
+                  //             />
+                  //           ) : (
+                  //             "Remove"
+                  //           )}
+                  //         </button>
+                  //       </div>
+                  //     </div>
+                  //   </div>
+                  // </div>
                 );
               })
             ) : (
@@ -558,166 +679,6 @@ const CheckoutPage = () => {
               </div>
             )}
           </div>
-          {/* <div className=" col-4 mx-4 p-0 d-flex flex-column ">
-            <div
-              className="card p-2 m-0"
-              style={{
-                height: "70px",
-                position: "sticky",
-                top: "0",
-                zIndex: "1",
-              }}
-            >
-              {cartLoading ? (
-                <Skeleton height="2rem" width="100%" className="mb-1 mt-1" />
-              ) : (
-                <p
-                  className="text-start p-0 mt-3"
-                  style={{ fontSize: "16px", fontWeight: "600" }}
-                >
-                  PRICE DETAILS
-                </p>
-              )}
-            </div>
-            {cartLoading ? (
-              <>
-                <div className="card mt-1 p-3" style={{ height: "200px" }}>
-                  <div className="row">
-                    <div className="col-12">
-                      <Skeleton height="2rem" width="100%" className="mb-1" />
-                      <Skeleton height="2rem" className="mb-1" />
-                      <Skeleton height="2rem" className="mb-1" />
-                      <Skeleton
-                        height="2rem"
-                        width="30%"
-                        className="mt-3 mb-3"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="card mt-1 p-3" style={{ height: "200px" }}>
-                  <div className="row">
-                    <div className="col-12">
-                      <Skeleton height="2rem" width="100%" className="mb-1" />
-                      <Skeleton height="2rem" className="mb-1" />
-                      <Skeleton height="2rem" className="mb-1" />
-                      <Skeleton
-                        height="2rem"
-                        width="30%"
-                        className="mt-3 mb-3"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              shoppingCardDatas?.map((item) => {
-                return (
-                  <div className="card mt-1 p-3" style={{ height: "200px" }}>
-                    <div className="row">
-                      <div
-                        className="col-8"
-                        style={{ fontSize: "14px", fontWeight: "400" }}
-                      >
-                        <p style={{ fontSize: "14px", fontWeight: "600" }}>
-                          {item.propertyName}{" "}
-                        </p>
-                        <p> Units </p>
-                        <p
-                          style={{
-                            fontSize: "14px",
-                            fontWeight: "600",
-                            color: "gray",
-                          }}
-                        >
-                          {" "}
-                          Booking Amount{" "}
-                        </p>
-                        <p style={{ fontSize: "14px", fontWeight: "600" }}>
-                          Total
-                        </p>
-                      </div>
-                      <div className="col-4">
-                        {item.disc_status === "true" ? (
-                          <p
-                            style={{
-                              fontSize: "14px",
-                              fontWeight: "600",
-                              textAlign: "end",
-                            }}
-                          >
-                            ₹ {item.total_aft_disc}
-                          </p>
-                        ) : (
-                          <p
-                            style={{
-                              fontSize: "14px",
-                              fontWeight: "600",
-                              textAlign: "end",
-                            }}
-                          >
-                            ₹ {item.price}
-                          </p>
-                        )}
-                        <p
-                          style={{
-                            fontSize: "14px",
-                            fontWeight: "400",
-                            textAlign: "end",
-                          }}
-                        >
-                          {item.units}
-                        </p>
-                        <p
-                          style={{
-                            fontSize: "14px",
-                            fontWeight: "600",
-                            color: "gray",
-                            textAlign: "end",
-                          }}
-                        >
-                          ₹ {item.booking_amount ? item.booking_amount : 0.0}{" "}
-                        </p>
-                        {item.disc_status === "true" ? (
-                          <p
-                            style={{
-                              fontSize: "14px",
-                              fontWeight: "600",
-                              textAlign: "end",
-                            }}
-                          >
-                            ₹
-                            {(
-                              parseFloat(item.total_aft_disc.replace(/,/g, "")) -
-                              parseFloat(
-                                item.booking_amount?.replace(/,/g, "") || 0
-                              )
-                            ).toFixed(2)}
-                          </p>
-                        ) : (
-                          <p
-                            style={{
-                              fontSize: "14px",
-                              fontWeight: "600",
-                              textAlign: "end",
-                            }}
-                          >
-                            ₹
-                            {(
-                              parseFloat(item.price.replace(/,/g, "")) -
-                              parseFloat(
-                                item.booking_amount?.replace(/,/g, "") || 0
-                              )
-                            ).toFixed(2)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div> */}
           <div className=" col-4 mx-4 p-0 d-flex flex-column ">
             <div
               className="card p-2 m-0"
@@ -840,7 +801,10 @@ const CheckoutPage = () => {
                         textAlign: "end",
                       }}
                     >
-                      ₹ -200
+                      ₹{" "}
+                      {responseCoupon?.discount_amount
+                        ? responseCoupon?.discount_amount
+                        : "0"}
                     </p>
 
                     <p
@@ -851,9 +815,14 @@ const CheckoutPage = () => {
                       }}
                     >
                       ₹{" "}
-                      {discountAmount.toLocaleString("en-IN", {
+                      {responseCoupon?.final_total
+                        ? responseCoupon?.final_total
+                        : discountAmount.toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                          })}
+                      {/* {discountAmount.toLocaleString("en-IN", {
                         minimumFractionDigits: 2,
-                      })}
+                      })} */}
                     </p>
                   </div>
                 </div>
@@ -888,9 +857,14 @@ const CheckoutPage = () => {
                       id="total"
                     >
                       ₹
-                      {discountAmount.toLocaleString("en-IN", {
+                      {/* {discountAmount.toLocaleString("en-IN", {
                         minimumFractionDigits: 2,
-                      })}
+                      })} */}
+                      {responseCoupon?.final_total
+                        ? responseCoupon?.final_total
+                        : discountAmount.toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                          })}
                     </p>
                     <p
                       style={{
