@@ -1,0 +1,789 @@
+import React, { useEffect, useRef, useState } from "react";
+import { Accordion } from "react-bootstrap";
+import logo from "../../assets/images/Goolok Final Logo copy.png"
+import ServicePaymentGateway from "./ServicePaymentGateway";
+import ServiceLegalPaymentGateway from "./ServiceLegalPaymentGateway";
+import DownloadIcon from '@mui/icons-material/Download';
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import { IMG_PATH } from "../../Api/api";
+import axiosInstance from "../../Api/axiosInstance";
+import { useAlert } from "react-alert";
+
+
+const ServiceStatusGetPatta = ({ invoiceData, fetchInvoice, eid }) => {
+
+
+  const steps = [
+    {
+      title: "Patta Service Booked",
+      details: (
+        <PattaServiceBooked pattaData={invoiceData[0]} fetchInvoice={fetchInvoice} eid={eid} />
+      ),
+      completed: invoiceData[0]?.dpt_status === null ? true : invoiceData[0]?.dpt_status === "Document_verify" ? true : invoiceData[0]?.dpt_status === "Service_verify" ? true : invoiceData[0]?.dpt_status === "Payment_verify" ? true : invoiceData[0]?.dpt_status === "App_verify" ? true : invoiceData[0]?.dpt_status === "hub_verify" ? true : false
+    },
+    {
+      title: "Document Verification",
+      details: (
+        <DocumentVerification docData={invoiceData[0]?.docdata} fetchInvoice={fetchInvoice} eid={eid} />
+      ),
+      completed: invoiceData[0]?.dpt_status === "Document_verify" ? true : invoiceData[0]?.dpt_status === "Service_verify" ? true : invoiceData[0]?.dpt_status === "Payment_verify" ? true : invoiceData[0]?.dpt_status === "App_verify" ? true : invoiceData[0]?.dpt_status === "hub_verify" ? true : false
+    },
+
+    {
+      title: "Service Confirmation Payment",
+      details: (
+        <ServiceConfirmationPayment invoiceData={invoiceData} fetchInvoice={fetchInvoice} eid={eid} />
+      ),
+      completed:invoiceData[0]?.dpt_status === "Payment_verify" ? true :  invoiceData[0]?.dpt_status === "App_verify" ? true : invoiceData[0]?.dpt_status === "hub_verify" ? true : false
+
+    },
+
+    {
+      title: "Patta Application",
+      details: (
+        <PattaApplication appdata={invoiceData[0]?.pattaAppdetails[0]} surveyData={invoiceData[0]?.pattaAppsurvey} fetchInvoice={fetchInvoice} eid={eid} />
+      ),
+      completed:   invoiceData[0]?.dpt_status === "App_verify" ? true : invoiceData[0]?.dpt_status === "hub_verify" ? true : false
+
+    },
+    {
+      title: " Application Status",
+      details: (
+        <ApplicationStatus statusData={invoiceData[0]?.application_status} fetchInvoice={fetchInvoice} eid={eid} />
+      ),
+      completed: invoiceData[0]?.dpt_status === "hub_verify" ? true : false
+
+    },
+    {
+      title: "Your Patta",
+      details: (
+        <YourPatta yourPatta={invoiceData[0]?.pattaDetails} survey={invoiceData[0]?.surveyDetails} fetchInvoice={fetchInvoice} eid={eid} />
+      ),
+      completed: invoiceData[0]?.dpt_status === "hub_verify" ? true : false
+    },
+
+  ];
+
+
+  const timelineRef = useRef(null);
+
+  const lastCompletedIndex = steps
+    .map((step) => step.completed)
+    .lastIndexOf(true);
+
+
+
+
+
+  useEffect(() => {
+    if (!timelineRef.current) return;
+
+
+    const updateTimelineHeight = () => {
+      const lastCompletedStep = document.getElementById(`step-${lastCompletedIndex}`);
+      if (lastCompletedStep) {
+        const header = lastCompletedStep.querySelector(".accordion-header");
+        const body = lastCompletedStep.querySelector(".accordion-body");
+
+        const headerHeight = header?.offsetHeight || 0;
+        const bodyHeight = body?.offsetHeight || 0;
+        const isExpanded = body?.style.display !== "none";
+
+
+        const height = lastCompletedStep.offsetTop +
+          headerHeight +
+          (isExpanded ? bodyHeight : headerHeight / 2) - 50;
+
+        timelineRef.current.style.height = `${height}px`;
+      }
+    };
+
+    updateTimelineHeight();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateTimelineHeight();
+    });
+
+    const stepElements = document.querySelectorAll('[id^="step-"]');
+    stepElements.forEach((el) => resizeObserver.observe(el));
+
+    return () => {
+      stepElements.forEach((el) => resizeObserver.unobserve(el));
+      resizeObserver.disconnect();
+    };
+  }, [lastCompletedIndex, steps.length]);
+
+  const [activeKey, setActiveKey] = useState("");
+
+  return (
+
+
+
+    <div className="mt-4">
+      <div className="position-relative ps-3" style={{ paddingBottom: "0" }}>
+        <div
+          className="position-absolute bg-secondary"
+          style={{
+            width: "6px",
+            top: "10px",
+            left: "12px",
+            bottom: "40px",
+            // height: "0"
+          }}
+        ></div>
+
+        <div
+          ref={timelineRef}
+          className="position-absolute bg-success"
+          style={{
+            width: "6px",
+            top: "10px",
+            left: "12px",
+            height: "0px",
+            bottom: "40px",
+            transition: "height 0.3s ease-in-out",
+          }}
+        ></div>
+
+
+        <Accordion defaultActiveKey={activeKey}>
+          {steps.map((step, index) => (
+            <div
+              key={index}
+              className="position-relative ps-4 mb-3"
+              id={`step-${index}`}
+            >
+              <span
+                className={`position-absolute start-0 translate-middle rounded-circle border border-white ${step.completed ? "bg-success" : "bg-secondary"}`}
+                style={{
+                  width: "15px",
+                  height: "15px",
+                  top: "10px",
+                  left: "7px",
+                  zIndex: 1,
+                  border: "2px solid #6c757d",
+                  ...(step.completed && { borderColor: "#198754" }),
+                }}
+              ></span>
+
+              <Accordion.Item key={index} eventKey={index.toString()}>
+                <Accordion.Header>{step.title}</Accordion.Header>
+                <Accordion.Body className="p-0">{step.details}</Accordion.Body>
+              </Accordion.Item>
+            </div>
+          ))}
+        </Accordion>
+      </div>
+    </div>
+  );
+};
+
+export default ServiceStatusGetPatta;
+
+
+
+const PattaServiceBooked = ({ pattaData, fetchInvoice, eid }) => {
+
+  return (
+
+    <>
+      <div className="price-box">
+        <div className="d-flex align-items-center justify-content-between gap-3">
+          <div>
+            <p className="fw-bold mb-0">Service Id:</p>
+          </div>
+          <div className="fw-bold">
+            <p className="mb-0">{pattaData?.propertyid}</p>
+          </div>
+        </div>
+      </div>
+      <div className="price-box">
+        <div className="d-flex align-items-center justify-content-between gap-3">
+          <div>
+            <p className="fw-bold mb-0">Service Type :</p>
+          </div>
+          <div className="fw-bold">
+            <p className="mb-0">{pattaData?.service_cat}</p>
+          </div>
+        </div>
+      </div>
+      <div className="price-box">
+        <div className="d-flex align-items-center justify-content-between gap-3">
+          <div>
+            <p className="fw-bold mb-0">Service Recieved On:</p>
+          </div>
+          <div className="fw-bold">
+            <p className="mb-0">{pattaData?.created_at},{pattaData?.time}</p>
+          </div>
+        </div>
+      </div>
+      <div className="price-box">
+        <div className="d-flex align-items-center justify-content-between gap-3">
+          <div>
+            <p className="fw-bold mb-0">Property Type :</p>
+          </div>
+          <div className="fw-bold">
+            <p className="mb-0"> {pattaData?.property_type} </p>
+          </div>
+        </div>
+      </div>
+      <div className="price-box">
+        <div className="d-flex align-items-center justify-content-between gap-3">
+          <div>
+            <p className="fw-bold mb-0">Sub Property Type :</p>
+          </div>
+          <div className="fw-bold">
+            <p className="mb-0">{pattaData?.subpro_name} </p>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+
+}
+
+const DocumentVerification = ({ docData, fetchInvoice, eid }) => {
+  const alert = useAlert();
+  const [showFull, setShowFull] = useState(false);
+  const [files, setFiles] = useState({});
+  const [loading, setLoading] = useState({});
+
+
+  const validTypes = [
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+  ];
+
+
+  const handleFileChange = (e, id) => {
+    const file = e.target.files[0];
+
+    if (!validTypes.includes(file.type)) {
+      alert.error("Invalid file type. Please upload a PDF, PNG, JPEG, or JPG file.");
+      return;
+    }
+
+
+    setFiles((prevFiles) => ({
+      ...prevFiles,
+      [id]: file,
+    }));
+  };
+
+  // Handle file upload
+  const handleFileUpload = async (id) => {
+
+
+    if (!files[id]) {
+      alert.error("Please select a file before submitting.");
+      return;
+    }
+
+    setLoading((prevLoading) => ({
+      ...prevLoading,
+      [id]: true,
+    }));
+
+
+    const formData = new FormData();
+    formData.append("document", files[id]);
+    formData.append("id", id);
+
+
+
+    try {
+      const response = await axiosInstance.post(
+        "/vendor/fileupdate",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "Gl-Status": "user"
+          },
+        }
+      );
+      fetchInvoice()
+
+      alert.success("Document submitted successfully!")
+
+    } catch (error) {
+      alert.error(
+        "Error! Please try again later"
+      );
+    }
+    finally {
+      setLoading((prevLoading) => ({
+        ...prevLoading,
+        [id]: false,
+      }));
+      // window.location.reload();
+    }
+  };
+
+
+
+  return (
+
+    <div className="row p-2">
+      {docData?.map((item, index) => (
+        <div className="col-md-6 mt-3">
+          <div className="w-100">
+            {item?.document ? (
+              <div className="card">
+                <div className="pdf-wrapper" onClick={() => window.open(`${IMG_PATH}enquiry/${item.document}`, "_blank")}>
+                  <embed
+                    src={`${IMG_PATH}enquiry/${item.document}#toolbar=0&navpanes=0&scrollbar=0`}
+                    className="pdf-hidden-scroll"
+                    type="application/pdf"
+                  />
+                </div>
+                <hr />
+                <div className="d-flex justify-content-between">
+                  <h6 className="mb-3 p-2"> {item.doc_type} </h6>
+                  <a
+                    href={`${IMG_PATH}enquiry/${item.document}`}
+                    download
+                    target="_blank"
+                    className="btn"
+                  >
+                    <DownloadIcon />
+                  </a>
+                </div>
+
+              </div>
+            ) : (
+              <div className="card p-3">
+                <h6 className="mb-3 p-2"> {item.doc_type} </h6>
+                <div>
+                  <input
+                    type="file"
+                    className="form-control"
+                    onChange={(e) => handleFileChange(e, item.id)}
+                  />
+                </div>
+                <div className="mt-2 text-end">
+
+                  <button
+                    className="btn mt-3 text-white"
+                    style={{ backgroundColor: "#2f4f4f" }}
+                    onClick={() => handleFileUpload(item.id)}
+                    disabled={loading[item.id]}
+                  >
+                    {loading[item.id] ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" />
+                        Submitting...
+                      </>
+                    ) : (
+                      "Submit"
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+
+          </div>
+
+        </div>
+      ))}
+
+    </div>
+  )
+}
+
+const ServiceConfirmationPayment = ({ invoiceData, fetchInvoice, eid }) => {
+  const contentRef = useRef(null)
+
+
+
+  const calculateTotals = () => {
+    const subtotal = invoiceData?.reduce((acc, item) => {
+      const chargesTotal = Number(item.amount) || 0;
+      return acc + chargesTotal;
+    }, 0);
+
+    const gst = subtotal * 0;
+    // const total = subtotal + gst;
+    const total = subtotal;
+
+
+
+    const currencyFormatter = new Intl.NumberFormat("en-US", {
+      currency: "USD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+    return {
+      subtotal: currencyFormatter.format(subtotal),
+      gst: currencyFormatter.format(gst),
+      total: currencyFormatter.format(total),
+    };
+  };
+  const generatePdf = () => {
+    const input = contentRef.current;
+    if (!input) {
+      console.error("contentRef is not available");
+      return;
+    }
+
+    // input.style.display = "block";
+
+    html2canvas(input, { scale: 2 }).then((canvas) => {
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      pdf.save("invoice.pdf");
+      // input.style.display = "none";
+    });
+  };
+
+  return (
+    <div>
+      {
+        invoiceData[0]?.amount === null ? (
+          <div className="d-flex justify-content-center p-3">
+            <h6 className="mb-3"> Waiting for Your Payment....!</h6>
+          </div>
+        ) : (
+          <>
+            <div className=" d-flex justify-content-end">
+              <button className="btn " onClick={generatePdf}><DownloadIcon sx={{ color: "blue" }} /> </button>
+            </div>
+            <article className="p-4" ref={contentRef} style={{ background: "#fff", }} >
+              <h3 className="text-center" style={{ fontWeight: "800" }}> INVOICE </h3>
+              <hr />
+              <div className="d-flex justify-content-between ">
+                <div className="mt-3 mb-5">
+                  <img src={logo} alt="goolok" style={{ width: "100px", height: "25px" }} />
+                  <div className="m-0">
+                    <p className='p-0 m-0' style={{ fontSize: "11px" }}><b>  Goolok Pvt ltd </b></p>
+                    <p className='p-0 m-0' style={{ fontSize: "11px" }}> <b>2nd Floor, 129,</b></p>
+                    <p className='p-0 m-0' style={{ fontSize: "11px" }}> <b>Nungambakkam, Chennai,</b> </p>
+                    <p className='p-0 m-0' style={{ fontSize: "11px" }}> <b>Tamil Nadu 600034 </b></p>
+                  </div>
+                </div>
+                <div className="mt-3 mb-5">
+                  <p className="p-0 m-0" style={{ fontSize: "11px" }}><b>Invoice no : </b> {invoiceData[0]?.invoiceid}  </p>
+                  <p className="p-0 m-0" style={{ fontSize: "11px" }}><b> Name: </b> {invoiceData[0]?.customer}  </p>
+                  <p className="p-0 m-0" style={{ fontSize: "11px" }}><b> Date:</b> {invoiceData[0]?.invoice_date} </p>
+                  <p className="p-0 m-0" style={{ fontSize: "11px" }}><b>  Email:</b>{invoiceData[0]?.email_id} </p>
+                  <p className="p-0 m-0" style={{ fontSize: "11px" }}><b>  Mobile:</b>{invoiceData[0]?.mobile} </p>
+                </div>
+              </div>
+              <section className="line-items  ">
+                <table className="items--table w-100 mt-5 p-2 table-bordered">
+                  <thead className="p-1">
+                    <tr className="p-1">
+                      <th className="p-1 text-center" style={{ fontSize: "11px" }}>S.NO</th>
+                      <th className='text-center' style={{ fontSize: "11px" }}>Qty</th>
+                      <th className='text-center' style={{ fontSize: "11px" }}>Description</th>
+                      <th className='text-center' style={{ fontSize: "11px" }}> Payment</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoiceData?.map((item, index) => (
+                      <>
+                        <tr className="p-1" key={index}>
+                          <td className="p-1 text-center" style={{ fontSize: "11px" }}> 1</td>
+                          <td className='text-center' style={{ fontSize: "11px" }}>1</td>
+                          <td className='text-center' style={{ fontSize: "11px" }}>{item.service_cat} </td>
+                          <td className='text-center' style={{ fontSize: "11px" }}>₹ {item.amount} </td>
+                        </tr>
+                      </>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan="3" className='text-end p-1' style={{ fontSize: "11px" }}>Sub Total</td>
+                      <td colSpan="2" className='text-center' style={{ fontSize: "11px" }}>{calculateTotals().subtotal} </td>
+                    </tr>
+                    <tr>
+                      <td colSpan="3" className='text-end p-1' style={{ fontSize: "11px" }}> GST(0%)</td>
+                      <td colSpan="2" className='text-center' style={{ fontSize: "11px" }}>0.00 </td>
+                    </tr>
+                    <tr>
+                      <td colSpan="3" className='text-end p-1' style={{ fontWeight: "600", fontSize: "11px" }}>Total</td>
+                      <td colSpan="2" className='text-center' style={{ fontWeight: "600", fontSize: "11px" }}>{calculateTotals().total} </td>
+                    </tr>
+                  </tfoot>
+                </table>
+                <div className="mt-5 mb-5 w-50">
+                  <p className="p-0 m-0 fw-bold">Terms & Conditions</p>
+                  <p className='p-0 m-0' style={{ fontSize: "11px" }}>payment deadlines, acceptable payment methods, late payment penalties, and other important clauses.</p>
+                </div>
+                <div>
+                  {invoiceData[0]?.invoice_status === "pending" ? (
+                    invoiceData[0]?.service_cat === "legal opinion" ? (
+                      <ServiceLegalPaymentGateway invoiceData={invoiceData[0]} fetchInvoice={fetchInvoice} eid={eid} />
+                    ) : (
+
+                      <ServicePaymentGateway invoiceData={invoiceData[0]} fetchInvoice={fetchInvoice} eid={eid} />
+                    )
+                  ) : (
+                    <div className="mt-5">
+                      <h4 className="text-center mt-5">Thank You For Your Business!</h4>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </article>
+          </>
+        )
+      }
+    </div>
+  )
+}
+
+
+
+const PattaApplication = ({ appdata, surveyData, fetchInvoice, eid }) => {
+
+
+  return (
+    <>
+      {appdata === undefined ? (
+        <div className="d-flex justify-content-center p-3">
+          <h6 className="mb-3"> Waiting for Your Patta Application....!</h6>
+        </div>
+      ) : (
+        <>
+          <div className="price-box">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-bold mb-0"> Patta Application No:</p>
+              </div>
+              <div className="fw-bold">
+                <p className="mb-0">{appdata?.application_no} </p>
+              </div>
+            </div>
+          </div>
+          <div className="price-box">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-bold mb-0"> Patta Application Date:</p>
+              </div>
+              <div className="fw-bold">
+                <p className="mb-0">{appdata?.patta_date}</p>
+              </div>
+            </div>
+          </div>
+          <div className="price-box">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-bold mb-0">Sale deed No :</p>
+              </div>
+              <div className="fw-bold">
+                <p className="mb-0">{appdata?.saledeed_no} </p>
+              </div>
+            </div>
+          </div>
+          <div className="price-box">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-bold mb-0">District :</p>
+              </div>
+              <div className="fw-bold">
+                <p className="mb-0">{appdata?.districtName}</p>
+              </div>
+            </div>
+          </div>
+          <div className="price-box">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-bold mb-0"> Taluk:</p>
+              </div>
+              <div className="fw-bold">
+                <p className="mb-0">{appdata?.talukName}</p>
+              </div>
+            </div>
+          </div>
+          <div className="price-box">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-bold mb-0">Village :</p>
+              </div>
+              <div className="fw-bold">
+                <p className="mb-0">{appdata?.villageName}</p>
+              </div>
+            </div>
+          </div>
+          <div className="price-box">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-bold mb-0">Survey no :</p>
+              </div>
+              <div className="fw-bold">
+                <p className="mb-0">{surveyData?.map(item => item.survey_no).join(',')}</p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  )
+}
+
+const ApplicationStatus = ({ statusData, fetchInvoice, eid }) => {
+
+  return (
+    <>
+      {statusData?.length === 0 ? (
+        <div className="d-flex justify-content-center p-3">
+          <h6 className="mb-3"> Waiting for Your Application Status....!</h6>
+        </div>
+      ) : (
+        <div className="p-2">
+          <table className="table table-bordered mt-3">
+            <thead >
+              <tr className="">
+                <th> Last FollowUp Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {statusData?.map((item, index) => (
+                <tr key={index}>
+                  <td>{item?.last_follow}</td>
+                  <td>{item?.remark}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+    </>
+  )
+}
+
+const YourPatta = ({ yourPatta, survey, fetchInvoice, eid }) => {
+  return (
+    <>
+      {yourPatta === null ? (
+        <div className="d-flex justify-content-center p-3">
+          <h6 className="mb-3"> Waiting for Your Patta ....!</h6>
+        </div>
+      ) : (
+        <>
+          <div className="price-box">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-bold mb-0"> Patta no:</p>
+              </div>
+              <div className="fw-bold">
+                <p className="mb-0">{yourPatta?.pattano} </p>
+              </div>
+            </div>
+          </div>
+          <div className="price-box">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-bold mb-0"> Patta name:</p>
+              </div>
+              <div className="fw-bold">
+                <p className="mb-0">{yourPatta?.pattaname}</p>
+              </div>
+            </div>
+          </div>
+          <div className="price-box">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-bold mb-0"> Fathers Name:</p>
+              </div>
+              <div className="fw-bold">
+                <p className="mb-0">{yourPatta?.father_name}</p>
+              </div>
+            </div>
+          </div>
+          <div className="price-box">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-bold mb-0"> Patta date:</p>
+              </div>
+              <div className="fw-bold">
+                <p className="mb-0">{yourPatta?.date}</p>
+              </div>
+            </div>
+          </div>
+          <div className="price-box">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-bold mb-0"> District:</p>
+              </div>
+              <div className="fw-bold">
+                <p className="mb-0">{yourPatta?.districtName}</p>
+              </div>
+            </div>
+          </div>
+          <div className="price-box">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-bold mb-0"> Taluk:</p>
+              </div>
+              <div className="fw-bold">
+                <p className="mb-0">{yourPatta?.talukName}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="price-box">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-bold mb-0"> Revenue village:</p>
+              </div>
+              <div className="fw-bold">
+                <p className="mb-0">{yourPatta?.villageName}</p>
+              </div>
+            </div>
+          </div>
+          <div className="price-box">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div>
+                <p className="fw-bold mb-0"> Land classification:</p>
+              </div>
+              <div className="fw-bold">
+                <p className="mb-0">{yourPatta?.classification}</p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+      {survey?.length === 0 ? (
+        null
+      ) : (
+        <div className="p-2 mt-4">
+          <h6>Survey Details :</h6>
+          <hr />
+          <table className="table table-bordered mt-3">
+            <thead >
+              <tr className="table-">
+                <th> S.No </th>
+                <th>Survey no</th>
+                <th> sub division </th>
+                <th> Hectare-Are </th>
+              </tr>
+            </thead>
+            <tbody>
+              {survey?.map((item, index) => (
+                <tr key={index}>
+                  <td>{index + 1}</td>
+                  <td>{item?.survey_no}</td>
+                  <td>{item?.sub_division}</td>
+                  <td>{item?.hectare}</td>
+                </tr>
+              ))}
+
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  )
+}
